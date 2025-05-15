@@ -12,7 +12,7 @@ Businesses drown in customer feedback but struggle to find actionable patterns. 
 - Take weeks to analyze (manual processing)
 
 **Our Solution:**  
-An AI-powered tool that:
+An AI-powered tool that: 
 1. **Automatically clusters** feedback into emerging themes
 2. **Labels topics** like "Login Issues" or "Delivery Delays"
 3. **Scores sentiment** per cluster
