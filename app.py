@@ -17,18 +17,18 @@ from transformers import pipeline
 import torch  # For PyTorch support
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 
-# --- Page Config ---
+# Configuring the page of the streamlit
 st.set_page_config(page_title="Advanced Feedback Analyzer", layout="wide")
 st.title("📊 Advanced Customer Feedback Analysis")
 
-# --- Configuration ---
+# Configuring the sidebar(left-panel)
 with st.sidebar:
     st.header("⚙️ Settings")
-    # Sentiment Analysis Options
+    # Choosing the sentiment analysis from the options
     st.subheader("Sentiment Analysis")
     sentiment_model = st.radio("Choose Model:", ["VADER", "BERT"])
     
-    # Topic Labeling Options
+    # Select the Topic Labeling by GPT4
     st.subheader("Topic Labeling")
     use_llm_labeling = st.checkbox("Use AI Topic Labels (GPT-4)", False)
     if use_llm_labeling:
@@ -37,25 +37,25 @@ with st.sidebar:
                 -Billing enabled ($1+ deposit)""")
         openai.api_key = st.text_input("OpenAI API Key", type="password")
     
-    # Aspect Options
+    # various aspects 
     st.subheader("Aspect Settings")
     aspect_threshold = st.slider("Aspect Similarity Threshold", 0.3, 0.9, 0.65)
 
-# --- Initialize Models ---
+#starting the models
 @st.cache_resource
 def load_models():
     models = {
         "vader": SentimentIntensityAnalyzer(),
         "bert": pipeline("sentiment-analysis", 
                        model="distilbert-base-uncased-finetuned-sst-2-english",
-                       framework="pt"),  # Force PyTorch
+                       framework="pt"),  
         "nlp": spacy.load("en_core_web_md")
     }
     return models
 
 models = load_models()
 
-# --- Enhanced Sentiment Analysis ---
+# Performing the Sentiment Analysis using rhe both models
 def analyze_sentiment(text, model_type):
     if model_type == "VADER":
         scores = models["vader"].polarity_scores(text)
@@ -64,7 +64,7 @@ def analyze_sentiment(text, model_type):
         result = models["bert"](text[:512])[0]
         return result['score'] * (1 if result['label'] == 'POSITIVE' else -1)
 
-# --- AI-Powered Topic Labeling ---
+# Topic labeling using AI
 def generate_topic_label(keywords):
     if not use_llm_labeling:
         return " | ".join(keywords[:3])
@@ -86,37 +86,35 @@ def generate_topic_label(keywords):
         st.error(f"AI Labeling Error: {str(e)}")
         return " | ".join(keywords[:3])
 
-# --- Aspect-Based Sentiment ---
+# Sentiment defined by the aspect
 def aspect_sentiment(text, aspect, nlp):
     doc = nlp(text)
     sentences = [sent.text for sent in doc.sents if aspect.lower() in sent.text.lower()]
     if not sentences: return 0
     return sum(analyze_sentiment(sent, sentiment_model) for sent in sentences) / len(sentences)
 
-# --- Main Processing ---
 if uploaded_file := st.file_uploader("📤 Upload CSV", type=["csv"]):
     df = pd.read_csv(uploaded_file)
     text_col = df.columns[0]
 
-    # --- Preprocessing ---
     with st.status("🔍 Processing data...", expanded=True) as status:
-        # Clean and preprocess text
+        # Cleaning and preprocessing the text from .csv
         df['cleaned'] = df[text_col].apply(lambda x: re.sub(r'[^\w\s]', '', str(x)))
         df['processed'] = df['cleaned'].apply(lambda x: " ".join([token.lemma_.lower() 
                                         for token in models["nlp"](x) 
                                         if not token.is_stop and token.is_alpha]))
         
-        # Clustering
+        # Clustering the text
         tfidf = TfidfVectorizer(max_features=1000, ngram_range=(1,2))
         X = tfidf.fit_transform(df['processed'])
         kmeans = KMeans(n_clusters=5)
         df['cluster'] = kmeans.fit_predict(X)
         
-        # Sentiment Analysis
+        # Sentiment Analysis of the text 
         st.write("⚖️ Analyzing sentiment...")
         df['sentiment'] = df[text_col].apply(lambda x: analyze_sentiment(x, sentiment_model))
         
-        # Aspect Detection
+        # Aspect Detection, few predefined, editable in the streamlit
         st.write("🏷️ Detecting aspects...")
         aspects = ["delivery", "quality", "price", "service", "website"]
         for aspect in aspects:
@@ -125,11 +123,10 @@ if uploaded_file := st.file_uploader("📤 Upload CSV", type=["csv"]):
         
         status.update(label="✅ Processing complete!", state="complete")
 
-    # --- Cluster Exploration ---
     cluster = st.selectbox("Select Cluster", df['cluster'].unique())
     cluster_df = df[df['cluster'] == cluster]
 
-    # --- Enhanced Topic Visualization ---
+    # visualization of the topic
     with st.expander("📌 Topic Analysis", expanded=True):
         col1, col2 = st.columns(2)
         
@@ -147,7 +144,7 @@ if uploaded_file := st.file_uploader("📤 Upload CSV", type=["csv"]):
             plt.axis("off")
             st.pyplot(plt)
 
-    # --- Aspect-Based Sentiment Dashboard ---
+    # Dashboard for the Aspect Sentiment 
     st.subheader("📈 Aspect Sentiment Breakdown")
     aspect_scores = {aspect: cluster_df[f"{aspect}_sentiment"].mean() for aspect in aspects}
     aspect_df = pd.DataFrame(list(aspect_scores.items()), columns=["Aspect", "Sentiment"])
@@ -163,7 +160,7 @@ if uploaded_file := st.file_uploader("📤 Upload CSV", type=["csv"]):
     ).properties(height=300)
     st.altair_chart(chart, use_container_width=True)
 
-    # --- Detailed Aspect Analysis ---
+    # Dropdown box for the raw data
     selected_aspect = st.selectbox("🔍 Drill Down into Aspect", aspects)
     aspect_reviews = cluster_df[cluster_df[f"{selected_aspect}_sentiment"].abs() > 0.2]
     
