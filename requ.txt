@@ -1,0 +1,22 @@
+streamlit - Web app framework
+
+pandas - Data manipulation
+
+wordcloud, matplotlib - Visualization
+
+spacy - NLP preprocessing and aspect extraction
+
+scikit-learn - Clustering, TF-IDF
+
+gensim - LDA topic modeling
+
+altair - Interactive charts
+
+vaderSentiment - Fast, rule-based sentiment analysis
+
+openai, httpx - GPT-4 topic labeling
+
+torch, transformers - BERT sentiment analysis
+
+If you only use VADER for sentiment and not BERT, 
+you can remove torch and transformers.
